@@ -1,0 +1,86 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "A user of the application.",
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "The user's email address."
+        },
+        "role": {
+          "type": "string",
+          "enum": ["admin", "user"],
+          "description": "The user's role."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the user was created."
+        }
+      },
+      "required": ["email", "role", "createdAt"]
+    },
+    "Bookmark": {
+      "title": "Bookmark",
+      "description": "A saved breaking event.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "The ID of the user who saved the bookmark."
+        },
+        "headline": {
+          "type": "string",
+          "description": "The headline of the event."
+        },
+        "detail": {
+          "type": "string",
+          "description": "The details of the event."
+        },
+        "category": {
+          "type": "string",
+          "description": "The category of the event."
+        },
+        "source": {
+          "type": "string",
+          "description": "The source of the event."
+        },
+        "source_url": {
+          "type": "string",
+          "description": "The URL of the source."
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "The timestamp of the event."
+        },
+        "confidence": {
+          "type": "string",
+          "description": "The confidence level of the event."
+        },
+        "savedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the bookmark was saved."
+        }
+      },
+      "required": ["userId", "headline", "detail", "category", "source", "timestamp", "confidence", "savedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": {
+        "$ref": "#/entities/User"
+      },
+      "description": "User profiles."
+    },
+    "/bookmarks/{bookmarkId}": {
+      "schema": {
+        "$ref": "#/entities/Bookmark"
+      },
+      "description": "Saved breaking events."
+    }
+  }
+}

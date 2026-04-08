@@ -1,0 +1,110 @@
+// ===============================================================
+// Assumed Data Model
+// ===============================================================
+//
+// Collection: users
+// Document ID: {userId}
+// Fields:
+//   - email: string (required)
+//   - role: string (required, 'admin' or 'user')
+//   - createdAt: timestamp (required, immutable)
+//
+// Collection: bookmarks
+// Document ID: {bookmarkId}
+// Fields:
+//   - userId: string (required, immutable)
+//   - headline: string (required)
+//   - detail: string (required)
+//   - category: string (required)
+//   - source: string (required)
+//   - source_url: string (optional)
+//   - timestamp: string (required)
+//   - confidence: string (required)
+//   - savedAt: timestamp (required, immutable)
+//
+// ===============================================================
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isDocOwner() {
+      return isAuthenticated() && request.auth.uid == resource.data.userId;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          (request.auth.token.email == "cm430391@gmail.com" && request.auth.token.email_verified == true));
+    }
+    
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+    
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+    
+    function areImmutableFieldsUnchanged(fields) {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(fields);
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+    
+    function isValidUser(data) {
+      return hasOnlyAllowedFields(['email', 'role', 'createdAt']) &&
+             data.email is string && data.email.size() > 0 && data.email.size() < 100 &&
+             data.role in ['admin', 'user'] &&
+             data.createdAt is timestamp;
+    }
+    
+    function isValidBookmark(data) {
+      return hasOnlyAllowedFields(['userId', 'headline', 'detail', 'category', 'source', 'source_url', 'timestamp', 'confidence', 'savedAt']) &&
+             data.userId is string && data.userId.size() > 0 && data.userId.size() < 50 &&
+             data.headline is string && data.headline.size() > 0 && data.headline.size() < 500 &&
+             data.detail is string && data.detail.size() > 0 && data.detail.size() < 5000 &&
+             data.category is string && data.category.size() > 0 && data.category.size() < 100 &&
+             data.source is string && data.source.size() > 0 && data.source.size() < 100 &&
+             (!('source_url' in data) || (data.source_url is string && data.source_url.size() < 1000)) &&
+             data.timestamp is string && data.timestamp.size() > 0 && data.timestamp.size() < 100 &&
+             data.confidence is string && data.confidence.size() > 0 && data.confidence.size() < 50 &&
+             data.savedAt is timestamp;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow create: if isAuthenticated() && isOwner(userId) && isValidUser(request.resource.data) && 
+                    ((request.resource.data.role == 'user') || isAdmin());
+      allow update: if isAuthenticated() && isOwner(userId) && isValidUser(request.resource.data) && 
+                    areImmutableFieldsUnchanged(['createdAt']) &&
+                    ((request.resource.data.role == resource.data.role) || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    match /bookmarks/{bookmarkId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid && isValidBookmark(request.resource.data);
+      allow update: if isAuthenticated() && isDocOwner() && request.resource.data.userId == request.auth.uid && isValidBookmark(request.resource.data) && areImmutableFieldsUnchanged(['userId', 'savedAt']);
+      allow delete: if isAuthenticated() && isDocOwner();
+    }
+  }
+}

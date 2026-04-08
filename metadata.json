@@ -1,0 +1,5 @@
+{
+  "name": "Iran Conflict Live Tracker",
+  "description": "Real-time AI-powered intelligence aggregator for the Iran conflict — scrapes X.com, global news APIs, and live data feeds every 60 seconds.",
+  "requestFramePermissions": []
+}
